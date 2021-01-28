@@ -1,5 +1,5 @@
 from manim import *
-import dataclasses
+import random
 
 toc_font = "Proxima Nova Bold"
 toc_blue = "#01CBE1"
@@ -24,6 +24,7 @@ if theme == "dark":
     color_text = white
     color_grid = toc_light_grey
     color_circle = toc_red
+    color_random_walk = toc_red
 
 elif theme == "light":
     color_background = white
@@ -34,6 +35,7 @@ elif theme == "light":
     color_text = toc_dark_blue
     color_grid = toc_dark_blue
     color_circle = toc_red
+    color_random_walk = toc_red
 
 
 def sum_v(v1, v2):
@@ -265,3 +267,129 @@ class SumVectors(Scene):
             dot_plastic.animate.shift(sum_v(current_speed, wind_speed)),
         )
         self.wait()
+
+
+def get_random_walk(magnitude):
+    return [
+        (random.random() - 0.5) * 2 * magnitude,
+        (random.random() - 0.5) * 2 * magnitude,
+        0,
+    ]
+
+
+class SeveralParticlesMoving(Scene):
+    def construct(self):
+        self.camera.background_color = color_background
+        positions = [[-4, 1, 0], [-3, -1, 0], [-5, 0, 0]]
+        currents = [
+            [[1.6, 0, 0], [1.5, 0, 0], [1.6, 0, 0]],
+            [[1.5, 0.4, 0], [1.5, 0.4, 0], [1.6, 0.35, 0]],
+            [[1.15, -0.2, 0], [1.15, -0.1, 0], [1.2, -0.1, 0]],
+        ]
+        winds = [
+            [[0, 0.7, 0], [0, 0.65, 0], [0, 0.65, 0]],
+            [[0, 0.55, 0], [0, 0.45, 0], [0, 0.8, 0]],
+            [[-0.6, -0.4, 0], [-0.6, -0.2, 0], [-0.5, -0.3, 0]],
+        ]
+        random_walks = [
+            [get_random_walk(0.5) for i in range(len(positions))]
+            for j in range(len(winds))
+        ]
+
+        dots = [Dot(point=pos, color=color_dot) for pos in positions]
+
+        paths = [
+            VMobject()
+            .set_points_as_corners([dot.get_center(), dot.get_center()])
+            .set_color(toc_blue)
+            for dot in dots
+        ]
+
+        def make_update_path(dot):
+            def update_path(path):
+                previous_path = path.copy()
+                previous_path.add_points_as_corners([dot.get_center()])
+                path.become(previous_path)
+
+            return update_path
+
+        for d in range(len(dots)):
+            paths[d].add_updater(make_update_path(dots[d]))
+
+        self.add(*paths, *dots)
+        self.wait()
+
+        for t in range(3):
+            arrows_currents = [
+                Arrow(
+                    dots[d].get_center(),
+                    sum_v(dots[d].get_center(), currents[t][d]),
+                    buff=0,
+                ).set_color(color_wind)
+                for d in range(len(dots))
+            ]
+            arrows_winds = [
+                Arrow(
+                    dots[d].get_center(),
+                    sum_v(dots[d].get_center(), winds[t][d]),
+                    buff=0,
+                ).set_color(color_wind)
+                for d in range(len(dots))
+            ]
+            arrows_random = [
+                Arrow(
+                    dots[d].get_center(),
+                    sum_v(dots[d].get_center(), random_walks[t][d]),
+                    buff=0,
+                ).set_color(color_random_walk)
+                for d in range(len(dots))
+            ]
+
+            self.play(
+                *[FadeIn(a_c) for a_c in arrows_currents],
+                *[FadeIn(a_w) for a_w in arrows_winds],
+                *[FadeIn(a_r) for a_r in arrows_random],
+            )
+
+            self.wait()
+
+            self.play(
+                *[
+                    arrows_winds[d].animate.shift(currents[t][d])
+                    for d in range(len(dots))
+                ],
+                *[
+                    arrows_random[d].animate.shift(sum_v(currents[t][d], winds[t][d]))
+                    for d in range(len(dots))
+                ],
+            )
+
+            arrows_speeds = [
+                Arrow(
+                    dots[d].get_center(),
+                    sum_v(
+                        dots[d].get_center(),
+                        sum_v(random_walks[t][d], sum_v(winds[t][d], currents[t][d])),
+                    ),
+                    buff=0,
+                ).set_color(color_speed_plastic)
+                for d in range(len(dots))
+            ]
+
+            self.play(*[FadeIn(a_s) for a_s in arrows_speeds])
+
+            self.play(
+                *[FadeOut(a_c) for a_c in arrows_currents],
+                *[FadeOut(a_w) for a_w in arrows_winds],
+                *[FadeOut(a_r) for a_r in arrows_random],
+            )
+
+            self.play(
+                *[
+                    dots[d].animate.shift(
+                        sum_v(random_walks[t][d], sum_v(winds[t][d], currents[t][d]))
+                    )
+                    for d in range(len(dots))
+                ],
+                *[FadeOut(a_s) for a_s in arrows_speeds],
+            )
