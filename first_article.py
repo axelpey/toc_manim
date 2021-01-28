@@ -1,4 +1,5 @@
 from manim import *
+import dataclasses
 
 toc_font = "Proxima Nova Bold"
 toc_blue = "#01CBE1"
@@ -146,11 +147,11 @@ class InterpolateTwoSteps(Scene):
             FadeIn(copy_closest_arrow),
             *[FadeIn(arrows_currents[0][i]) for i in range(len(current_values))],
         )
-        self.wait(duration=2)
+        self.wait()
 
         # Indicate closest vector
         self.play(GrowFromCenter(closest_point_circle), FadeIn(closest_point_text))
-        self.wait(duration=4)
+        self.wait(duration=2)
 
         # Move closest vector to dot
         self.play(
@@ -159,14 +160,13 @@ class InterpolateTwoSteps(Scene):
             FadeOut(text_plastic),
             Transform(arrows_currents[0][closest_arrow_idx[0]], arrow_plastic_speed),
         )
-        self.wait(duration=1)
+        self.wait()
 
         # Move plastic
         self.play(
             dot_plastic.animate.shift(current_values[closest_arrow_idx[0]][1]),
             FadeOut(arrows_currents[0][closest_arrow_idx[0]]),
         )
-        self.wait()
 
         arrows_currents[0][closest_arrow_idx[0]] = copy_closest_arrow
 
@@ -178,11 +178,11 @@ class InterpolateTwoSteps(Scene):
             ],
             run_time=3,
         )
-        self.wait(duration=1)
+        self.wait()
 
         # Indicate closest vector
         self.play(GrowFromCenter(closest_point_circle_2), FadeIn(closest_point_text_2))
-        self.wait(duration=3)
+        self.wait(duration=2)
 
         arrow_plastic_speed_2 = Arrow(
             dot_plastic.get_center(),
@@ -209,5 +209,59 @@ class InterpolateTwoSteps(Scene):
         self.play(
             FadeOut(numberplane),
             *[FadeOut(arrows_currents[0][i]) for i in range(len(current_values))],
+        )
+        self.wait()
+
+
+class SumVectors(Scene):
+    def construct(self):
+        wind_speed = [1, 2, 0]
+        current_speed = [1, -1, 0]
+
+        self.camera.background_color = color_background
+        dot_plastic = Dot(color=color_dot)
+        text_plastic = (
+            Text("Plastic particle", font=toc_font, color=color_text)
+            .scale(0.4)
+            .next_to(dot_plastic)
+        )
+
+        arrow_current = Arrow(ORIGIN, current_speed, buff=0).set_color(color_current)
+        text_current = (
+            Text("Current speed", font=toc_font, color=color_text)
+            .scale(0.4)
+            .next_to(arrow_current, direction=LEFT)
+        )
+
+        arrow_wind = Arrow(ORIGIN, wind_speed, buff=0).set_color(color_wind)
+        text_wind = (
+            Text("Wind speed", font=toc_font, color=color_text)
+            .scale(0.4)
+            .next_to(arrow_wind)
+        )
+
+        arrow_plastic = Arrow(
+            ORIGIN, sum_v(wind_speed, current_speed), buff=0
+        ).set_color(color_speed_plastic)
+        text_speed_plast = (
+            Text("Plastic speed", font=toc_font, color=color_text)
+            .scale(0.5)
+            .next_to(arrow_plastic, direction=UP)
+        )
+
+        self.add(dot_plastic, text_plastic)
+        self.play(FadeIn(arrow_current), FadeIn(text_current))
+        self.play(FadeIn(arrow_wind), FadeIn(text_wind))
+        self.wait()
+        self.play(FadeOut(text_current), FadeOut(text_wind), FadeOut(text_plastic))
+        self.play(arrow_wind.animate.shift(current_speed))
+        self.play(FadeIn(arrow_plastic), FadeIn(text_speed_plast))
+        self.wait()
+        self.play(
+            FadeOut(arrow_plastic),
+            FadeOut(text_speed_plast),
+            FadeOut(arrow_current),
+            FadeOut(arrow_wind),
+            dot_plastic.animate.shift(sum_v(current_speed, wind_speed)),
         )
         self.wait()
